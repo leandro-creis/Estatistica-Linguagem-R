@@ -1,0 +1,175 @@
+---
+title: "Atividade 25_03_Estatistica"
+author: "Leandro Cardoso"
+date: '2022-03-26'
+output: html_document
+---
+
+
+```{r}
+if(!require(dplyr))
+  install.packages("dplyr")
+library(dplyr)
+
+if(!require(ggplot2))
+  install.packages("ggplot2")
+library(ggplot2)
+
+if(!require(qqplotr))
+    install.packages("qqplotr")
+  library(qqplotr)
+
+if(!require(car))
+    install.packages("car")
+  library(car)
+
+if(!require(tidyr))
+    install.packages("tidyr")
+  library(tidyr)
+
+if(!require(ggpubr))
+    install.packages("ggpubr")
+  library(ggpubr)
+
+if(!require(rstatix))
+  install.packages("rstatix") 
+library(rstatix)
+
+if(!require(nortest))
+  install.packages("nortest") 
+library(nortest)
+```
+```{r}
+# Carregando o banco de dados
+library(readr)
+combustivel <- read_csv2("~/ATIVIDADE_25_03_ESTATISTICA/combustivel 2021.2.csv")
+combustivel
+```
+```{r}
+combustivel_clean <- combustivel %>% 
+  select(Regiao = 'Regiao - Sigla',
+         Estado = 'Estado - Sigla',
+         Produto,
+         Valor = 'Valor de Venda',
+         Bandeira
+         )
+combustivel_clean
+```
+```{r}
+prop.table(table(combustivel_clean$Produto))*100
+```
+
+```{r}
+combustivel_clean %>%
+  ggplot(aes(Regiao,fill = Produto))+
+  geom_bar()
+```
+```{r}
+combustivel_clean %>%
+  ggplot(aes(Valor))+
+          geom_histogram(aes(y =stat(count) / sum(count)),bins = 10)+
+          geom_density()+
+          facet_wrap(~Produto)
+          scale_y_continuous(labels = scales::percent)
+```
+
+```{r}
+combustivel_clean %>%
+    ggplot(aes(sample = Valor))+
+    facet_wrap(~Produto)+
+    stat_qq_band(fill = "gray")+
+    stat_qq_line(col = "red")+
+    stat_qq_point()
+```
+```{r}
+combustivel_clean %>%
+  group_by(Produto)%>%
+  summarise(Estatistica = shapiro.test(Valor)$statistic,
+            p_valor = shapiro.test(Valor)$p.value)
+
+shapiro.wilk.test(combustivel_clean$Valor)
+```
+
+```{r}
+combustivel_clean %>%
+  group_by(Produto) %>%
+  summarise(Media = mean(Valor), Desvio_Padrao = sd(Valor), n =n())
+```
+
+```{r}
+#Anderson-Darling Test
+
+combustivel_clean%>%
+  ggplot(aes(combustivel_clean$Valor))+
+  geom_histogram()
+
+ad.test(combustivel_clean$Valor)
+```
+```{r}
+#ESTADO com o MENOR  preço medio de glp
+preco_estado_produto <- group_by(combustivel_clean, Estado,Produto)%>%summarise(Total=mean(Valor))
+
+preco_estado_produto %>% arrange(Total)
+```
+
+```{r}
+preco_estado %>%
+  ggplot(aes(Estado,Total)) +
+  geom_point() 
+```
+
+```{r}
+#ESTADO com o MENOR  preço medio de glp
+preco_estado <- group_by(combustivel_clean, Produto, Estado,Regiao)%>%summarise(Total=mean(Valor))
+
+preco_estado %>% arrange(Produto,Total)
+
+
+```
+
+```{r}
+preco_regiao <- group_by(combustivel_clean, Produto, Regiao)%>%summarise(Total=mean(Valor))
+
+preco_regiao %>% arrange(Produto,Total)
+```
+
+```{r}
+preco_regiao %>%
+  ggplot(aes(Regiao,Total, color=Regiao))+
+  facet_wrap(~Produto)+
+  labs(y="Valor")+
+  geom_point()
+```
+```{r}
+
+# Chevrolet Onix 1.0 Turbo automático 2022
+#consumo cidade A9,1    G12,8
+
+
+gasolina_comum<-group_by(preco_estado,Produto,Regiao,Total)%>%filter(Produto=="GASOLINA")%>% mutate(Preco_consumo = Total/12,8)
+
+gasolina_aditivada<-group_by(preco_estado,Produto,Regiao,Total)%>%filter(Produto=="GASOLINA ADITIVADA") %>% mutate(Preco_consumo = Total/12,8)
+
+etanol<-group_by(preco_estado,Produto,Regiao,Total)%>%filter(Produto=="ETANOL") %>% mutate(Preco_consumo = Total/9,1)
+
+```
+
+```{r}
+consumo_carro <- bind_rows(gasolina_aditivada,gasolina_comum,etanol)
+
+consumo_carro %>%
+  ggplot(aes(Estado, Preco_consumo, color = Produto))+
+  labs(y="Preço por KM")+
+  geom_point()
+```
+```{r}
+preco_estado_bandeira <- group_by(combustivel_clean, Estado,Bandeira,Produto)%>%summarise(Total=mean(Valor))
+
+preco_estado_bandeira %>% arrange(Estado,Total,Bandeira,Produto)
+```
+```{r}
+combustivel_clean %>%
+  ggplot(aes(Estado,fill = Bandeira))+
+  geom_bar()
+``````
+
